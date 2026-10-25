@@ -4,13 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Purchase;
 use App\Models\Sale;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // Pelanggan tidak memakai dashboard internal; arahkan ke katalog menu.
+        if (! Gate::allows('view-inventory')) {
+            return redirect()->route('storefront.index');
+        }
+
         $user = $request->user();
 
         // Admin melihat seluruh penjualan; staff hanya miliknya sendiri.
@@ -27,7 +34,7 @@ class DashboardController extends Controller
                 ->whereMonth('sold_at', now()->month)
                 ->sum('total'),
             'sales_count' => $sales()->count(),
-            'purchases_count' => 0, // Dinetralkan jadi 0 agar Blade view tidak error
+            'purchases_count' => $user->isAdmin() ? Purchase::completed()->count() : null,
         ];
 
         // Penjualan 7 hari terakhir (query agregat).

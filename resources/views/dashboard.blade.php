@@ -8,9 +8,14 @@
             <h1 class="page-title">Selamat datang, {{ Auth::user()->name }}</h1>
             <p class="page-subtitle">Ringkasan stok dan penjualan Sweet Glaze.</p>
         </div>
-        @can('manage-sales')
-            <a href="{{ route('sales.create') }}" class="btn-primary-action">Penjualan baru</a>
-        @endcan
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="{{ route('menu.index') }}" class="btn" style="background: #fff; color: #1e293b; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 8px; font-weight: bold; text-decoration: none;">
+                🍩 Katalog Menu
+            </a>
+            @can('manage-sales')
+                <a href="{{ route('sales.create') }}" class="btn-primary-action">Penjualan baru</a>
+            @endcan
+        </div>
     </div>
 </section>
 

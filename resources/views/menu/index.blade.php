@@ -40,14 +40,14 @@
 <!-- Daftar Produk -->
 <div class="menu-grid">
     @forelse ($products as $p)
-        <div class="menu-card">
+        <div class="menu-card" data-id="{{ $p->id }}" data-price="{{ $p->selling_price }}" data-stock="{{ $p->stock }}">
             <div>
                 <span class="badge">{{ $p->category->name }}</span>
                 <div class="title">{{ $p->name }}</div>
                 <div class="price">Rp {{ number_format($p->selling_price, 0, ',', '.') }}</div>
                 <div class="stock">Tersedia: {{ $p->stock }} pcs</div>
             </div>
-            <button type="button" class="btn-choose" onclick="selectItem('{{ $p->name }}', {{ $p->selling_price }})">
+            <button type="button" class="btn-choose" onclick="selectItem({{ $p->id }})">
                 + Pilih
             </button>
         </div>
@@ -64,22 +64,69 @@
         <div style="font-size: 12px; opacity: 0.8;">Item dipilih: <b id="cartCount">0</b></div>
         <div style="font-size: 16px; font-weight: bold;" id="cartTotal">Rp 0</div>
     </div>
-    <a href="{{ route('sales.create') }}" class="btn btn-primary" style="background: #fff; color: #1e293b; text-decoration: none; padding: 6px 16px; border-radius: 20px; font-weight: bold;">
-        Lanjut Pesan &rarr;
-    </a>
+
+    <form id="checkoutForm" action="{{ route('storefront.checkout') }}" method="POST" style="margin: 0;">
+        @csrf
+        <input type="hidden" name="cart_data" id="cartDataInput" value="">
+        <button type="submit" class="btn btn-primary" style="background: #fff; color: #1e293b; border-radius: 20px; font-weight: bold; padding: 8px 18px; border: none; cursor: pointer;">
+            Lanjut Pesan &rarr;
+        </button>
+    </form>
 </div>
 
 <script>
-    let selectedCount = 0;
-    let totalPrice = 0;
+    let cart = {};
 
-    function selectItem(name, price) {
-        selectedCount++;
-        totalPrice += price;
+    function selectItem(id) {
+        let card = document.querySelector(`.menu-card[data-id="${id}"]`);
+        if (!card) return;
 
-        document.getElementById('cartCount').textContent = selectedCount;
-        document.getElementById('cartTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(totalPrice);
-        document.getElementById('cartSummary').style.display = 'flex';
+        let maxStock = parseInt(card.dataset.stock, 10);
+        let currentQty = cart[id] || 0;
+
+        if (currentQty >= maxStock) {
+            alert('Stok produk telah mencapai batas maksimum.');
+            return;
+        }
+
+        cart[id] = currentQty + 1;
+        updateCart();
     }
+
+    function updateCart() {
+        let totalCount = 0;
+        let totalPrice = 0;
+
+        for (let id in cart) {
+            let qty = cart[id];
+            totalCount += qty;
+
+            let card = document.querySelector(`.menu-card[data-id="${id}"]`);
+            if (card) {
+                let price = parseFloat(card.dataset.price);
+                totalPrice += price * qty;
+            }
+        }
+
+        document.getElementById('cartCount').textContent = totalCount;
+        document.getElementById('cartTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(totalPrice);
+        
+        let cartInput = document.getElementById('cartDataInput');
+        if (cartInput) {
+            cartInput.value = JSON.stringify(cart);
+        }
+
+        document.getElementById('cartSummary').style.display = totalCount > 0 ? 'flex' : 'none';
+    }
+
+    document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
+        let cartInput = document.getElementById('cartDataInput');
+        cartInput.value = JSON.stringify(cart);
+        
+        if (!cartInput.value || cartInput.value === '{}') {
+            e.preventDefault();
+            alert('Pilih minimal satu menu terlebih dahulu.');
+        }
+    });
 </script>
 @endsection
