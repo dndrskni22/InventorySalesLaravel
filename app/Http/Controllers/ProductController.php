@@ -2,88 +2,101 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProductRequest;
-use App\Models\Category;
 use App\Models\Product;
+use App\Models\Category;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $filters = $request->validate([
-            'q' => ['nullable', 'string', 'max:100'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-        ]);
+        $query = Product::with('category', 'supplier');
 
-        $products = Product::with('category') // eager load: hindari N+1
-            ->search($filters['q'] ?? null)
-            ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
-            ->orderBy('name')
-            ->paginate(10)
-            ->withQueryString();
+        if ($request->filled('q')) {
+            $keyword = $request->q;
+            $query->where(function($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
+                  ->orWhere('sku', 'like', "%{$keyword}%");
+            });
+        }
 
-        return view('products.index', [
-            'products' => $products,
-            'categories' => Category::orderBy('name')->get(),
-            'filters' => $filters,
-        ]);
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $products = $query->latest()->paginate(10)->withQueryString();
+        $categories = Category::all();
+        $filters = $request->only(['q', 'category_id']);
+
+        return view('products.index', compact('products', 'categories', 'filters'));
     }
 
     public function lowStock()
     {
-        $products = Product::with('category')
-            ->lowStock()
-            ->orderByRaw('(minimum_stock - stock) desc')
-            ->paginate(10);
-
+        $products = Product::where('stock', '<=', 5)->paginate(10);
         return view('products.low-stock', compact('products'));
     }
 
     public function create()
     {
-        return view('products.create', ['categories' => Category::orderBy('name')->get()]);
+        $categories = Category::all();
+        $suppliers = Supplier::all();
+        return view('products.create', compact('categories', 'suppliers'));
     }
 
-    public function store(ProductRequest $request)
+    public function store(Request $request)
     {
-        Product::create($request->validated());
+        $validated = $request->validate([
+            'sku' => 'required|string|max:255|unique:products,sku',
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'stock' => 'required|integer|min:0',
+            'purchase_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+        ]);
+
+        Product::create($validated);
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil ditambahkan.');
     }
 
     public function show(Product $product)
     {
-        $product->load('category');
+        $product->load('category', 'supplier', 'saleItems.sale');
+        $recentSales = $product->saleItems()->latest()->take(5)->get();
+        $recentPurchases = collect();
 
-        return view('products.show', [
-            'product' => $product,
-            'recentSales' => $product->saleItems()->with('sale.user')->latest()->limit(5)->get(),
-        ]);
+        return view('products.show', compact('product', 'recentSales', 'recentPurchases'));
     }
 
     public function edit(Product $product)
     {
-        return view('products.edit', [
-            'product' => $product,
-            'categories' => Category::orderBy('name')->get(),
-        ]);
+        $categories = Category::all();
+        $suppliers = Supplier::all();
+        return view('products.edit', compact('product', 'categories', 'suppliers'));
     }
 
-    public function update(ProductRequest $request, Product $product)
+    public function update(Request $request, Product $product)
     {
-        $product->update($request->validated());
+        $validated = $request->validate([
+            'sku' => 'required|string|max:255|unique:products,sku,' . $product->id,
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'stock' => 'required|integer|min:0',
+            'purchase_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+        ]);
 
-        return redirect()->route('products.show', $product)->with('success', 'Produk berhasil diperbarui.');
+        $product->update($validated);
+
+        return redirect()->route('products.index')->with('success', 'Produk berhasil diperbarui.');
     }
 
     public function destroy(Product $product)
     {
-        // Produk yang sudah dipakai transaksi penjualan tidak boleh di-hard delete.
-        if ($product->saleItems()->exists()) {
-            return back()->with('error', 'Produk sudah dipakai dalam transaksi dan tidak dapat dihapus.');
-        }
-
         $product->delete();
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil dihapus.');

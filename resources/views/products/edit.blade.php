@@ -1,18 +1,20 @@
 @extends('layouts.app')
-@section('title', 'Ubah Produk - Sweet Glaze')
+
+@section('title', 'Edit Produk - Sweet Glaze')
 
 @section('content')
-<div class="top-bar">
-    <h1 class="page-title">Ubah produk</h1>
-</div>
+<div class="card" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h1>Edit Produk</h1>
 
-<form method="POST" action="{{ route('products.update', $product) }}" class="card form-card">
-    @csrf
-    @method('PUT')
-    @include('products._form')
-    <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Simpan perubahan</button>
-        <a href="{{ route('products.show', $product) }}" class="btn">Batal</a>
-    </div>
-</form>
+    <form action="{{ route('products.update', $product->id) }}" method="POST">
+        @csrf
+        @method('PUT')
+        @include('products.form')
+
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn-primary">Perbarui</button>
+            <a href="{{ route('products.index') }}" class="btn-secondary" style="margin-left: 10px;">Batal</a>
+        </div>
+    </form>
+</div>
 @endsection

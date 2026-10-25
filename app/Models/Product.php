@@ -2,25 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $fillable = [
-        'category_id', 'sku', 'name',
-        'purchase_price', 'selling_price', 'stock', 'minimum_stock',
-    ];
+    use HasFactory;
 
-    protected $casts = [
-        'purchase_price' => 'decimal:2',
-        'selling_price' => 'decimal:2',
-        'stock' => 'integer',
-        'minimum_stock' => 'integer',
-    ];
+    protected $guarded = ['id'];
 
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function saleItems()
@@ -33,23 +31,18 @@ class Product extends Model
         return $this->hasMany(PurchaseItem::class);
     }
 
-    public function scopeSearch($query, ?string $term)
+    public function isLowStock()
     {
-        return $query->when($term, function ($q) use ($term) {
-            $q->where(function ($q) use ($term) {
-                $q->where('sku', 'like', "%{$term}%")
-                  ->orWhere('name', 'like', "%{$term}%");
-            });
-        });
+        return $this->stock <= 5;
     }
 
     public function scopeLowStock($query)
     {
-        return $query->whereColumn('stock', '<=', 'minimum_stock');
+        return $query->where('stock', '<=', 5);
     }
 
-    public function isLowStock(): bool
+    public static function lowStock()
     {
-        return $this->stock <= $this->minimum_stock;
+        return self::where('stock', '<=', 5)->get();
     }
 }
