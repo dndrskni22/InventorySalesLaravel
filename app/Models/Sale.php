@@ -9,7 +9,15 @@ class Sale extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
 
-    protected $fillable = ['user_id', 'customer_id', 'sale_number', 'total', 'status', 'sold_at'];
+    public const PAYMENT_METHODS = [
+        'cash' => 'Tunai',
+        'qris' => 'QRIS (simulasi)',
+        'transfer' => 'Transfer bank (simulasi)',
+    ];
+
+    protected $fillable = [
+        'user_id', 'customer_id', 'sale_number', 'total', 'status', 'payment_method', 'sold_at',
+    ];
 
     protected $casts = [
         'total' => 'decimal:2',
@@ -49,5 +57,10 @@ class Sale extends Model
     public function isCompleted(): bool
     {
         return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function paymentLabel(): string
+    {
+        return self::PAYMENT_METHODS[$this->payment_method] ?? '-';
     }
 }

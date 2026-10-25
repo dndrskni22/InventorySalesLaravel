@@ -18,7 +18,13 @@ class SaleService
      *
      * @param  array<int, array{product_id:int|string, quantity:int|string}>  $items
      */
-    public function create(User $user, array $items, ?Carbon $soldAt = null, ?int $customerId = null): Sale
+    public function create(
+        User $user,
+        array $items,
+        ?Carbon $soldAt = null,
+        ?int $customerId = null,
+        string $paymentMethod = 'cash'
+    ): Sale
     {
         // Gabungkan baris produk yang sama, urutkan agar urutan lock konsisten.
         $lines = [];
@@ -28,13 +34,14 @@ class SaleService
         }
         ksort($lines);
 
-        return DB::transaction(function () use ($user, $lines, $soldAt, $customerId) {
+        return DB::transaction(function () use ($user, $lines, $soldAt, $customerId, $paymentMethod) {
             $sale = Sale::create([
                 'user_id' => $user->id,
                 'customer_id' => $customerId,
                 'sale_number' => 'TMP-' . uniqid('', true),
                 'total' => 0,
                 'status' => Sale::STATUS_COMPLETED,
+                'payment_method' => $paymentMethod,
                 'sold_at' => $soldAt ?? now(),
             ]);
 

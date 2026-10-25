@@ -31,7 +31,8 @@
                 Pembeli umum
             @endif
         </dd>
-        <dt>Kasir</dt><dd>{{ $sale->user->name }}</dd>
+        <dt>Dicatat oleh</dt><dd>{{ $sale->user->name }}</dd>
+        <dt>Pembayaran</dt><dd>{{ $sale->paymentLabel() }}</dd>
         <dt>Total</dt><dd><strong>@rupiah($sale->total)</strong></dd>
     </dl>
 </div>
