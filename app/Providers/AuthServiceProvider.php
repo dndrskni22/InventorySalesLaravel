@@ -23,5 +23,12 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('manage-sales', fn (User $user) => $user->isAdmin() || $user->isStaff());
         Gate::define('manage-purchases', fn (User $user) => $user->isAdmin() || $user->isStaff());
         Gate::define('manage-customers', fn (User $user) => $user->isAdmin() || $user->isStaff());
+
+        // Data internal (harga beli, stok) hanya untuk Admin dan Staff.
+        Gate::define('view-inventory', fn (User $user) => $user->isAdmin() || $user->isStaff());
+
+        // Katalog dan pemesanan: semua pengguna yang sudah login
+        // (staff mencatat pesanan, pelanggan memesan sendiri).
+        Gate::define('place-order', fn (User $user) => true);
     }
 }
