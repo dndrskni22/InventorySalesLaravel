@@ -2,59 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\SupplierRequest;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
     {
-        $filters = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
-
-        $suppliers = Supplier::withCount('purchases')
-            ->when($filters['q'] ?? null, function ($q, $term) {
-                $q->where(function ($q) use ($term) {
-                    $q->where('name', 'like', "%{$term}%")->orWhere('email', 'like', "%{$term}%");
-                });
-            })
-            ->orderBy('name')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('suppliers.index', compact('suppliers', 'filters'));
+        $suppliers = Supplier::latest()->paginate(10);
+        return view('suppliers.index', compact('suppliers'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
         return view('suppliers.create');
     }
 
-    public function store(SupplierRequest $request)
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
     {
-        Supplier::create($request->validated());
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'address' => 'nullable|string',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        Supplier::create($validated);
 
         return redirect()->route('suppliers.index')->with('success', 'Pemasok berhasil ditambahkan.');
     }
 
+    /**
+     * Display the specified resource.
+     */
+    public function show(Supplier $supplier)
+    {
+        return view('suppliers.show', compact('supplier'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
     public function edit(Supplier $supplier)
     {
         return view('suppliers.edit', compact('supplier'));
     }
 
-    public function update(SupplierRequest $request, Supplier $supplier)
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Supplier $supplier)
     {
-        $supplier->update($request->validated());
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'address' => 'nullable|string',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $supplier->update($validated);
 
         return redirect()->route('suppliers.index')->with('success', 'Pemasok berhasil diperbarui.');
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(Supplier $supplier)
     {
-        if ($supplier->purchases()->exists()) {
-            return back()->with('error', 'Pemasok sudah memiliki riwayat pembelian dan tidak dapat dihapus.');
-        }
-
         $supplier->delete();
 
         return redirect()->route('suppliers.index')->with('success', 'Pemasok berhasil dihapus.');
